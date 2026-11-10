@@ -581,7 +581,10 @@ async function detectBanner(resourceUrl) {
     const ct = (res.headers.get('content-type') || '').toLowerCase();
     if (ct.startsWith('image/')) return { banner_image_url: resourceUrl };
     if (ct.startsWith('text/html')) {
-      const html = (await res.text()).slice(0, 200000); // chặn trang quá lớn
+      // Giới hạn 3MB (không phải giới hạn tải — toàn bộ đã tải xong ở await res.text() rồi — chỉ để tránh
+      // giữ chuỗi quá lớn trong bộ nhớ khi quét regex). 200KB cũ từng làm lỡ og:image của trang lớn như
+      // YouTube (thẻ nằm ở byte ~786.000) — xác nhận thật 11/11/2026.
+      const html = (await res.text()).slice(0, 3000000);
       const og = (prop) => {
         const re1 = new RegExp(`<meta[^>]+property=["']og:${prop}["'][^>]+content=["']([^"']+)["']`, 'i');
         const re2 = new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:${prop}["']`, 'i');
