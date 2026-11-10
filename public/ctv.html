@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EFCLoyalty</title>
+<meta name="theme-color" content="#163963">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mau: #163963; --mau-toi: #0F2A4A; --vang: #C0A866; --vang-nhat: #F7F1CF;
+    --chu: #14243A; --phu: #5B6B80; --nen: #FBF9F3; --the-nen: #fff; --vien: #E7E0CB;
+    --loi: #A2452E; --loi-nen: #FCEDE8; --dat: #1E7B4F; --dat-nen: #E3F3EA;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--chu);
+         background: var(--nen); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  main { max-width: 480px; margin: 0 auto; padding: 20px 16px 88px; } /* chừa chỗ cho thanh menu dưới */
+  h1 { font-size: 1.4rem; line-height: 1.4; margin: 8px 0 4px; padding-top: .1em; }
+  h2 { font-size: 1.1rem; margin: 0 0 10px; }
+  .phu { color: var(--phu); font-size: .95rem; }
+  .the { background: var(--the-nen); border: 1px solid var(--vien); border-radius: 14px; padding: 18px; margin-top: 16px; }
+  label { display: block; font-weight: 600; margin: 12px 0 6px; }
+  input { width: 100%; min-height: 48px; padding: 10px 12px; font: inherit; border: 1px solid var(--vien); border-radius: 10px; }
+  input:focus { outline: 2px solid var(--vang); outline-offset: 1px; border-color: var(--mau); }
+  button { width: 100%; min-height: 52px; margin-top: 16px; font: inherit; font-weight: 700; color: #fff; background: var(--mau);
+           border: 0; border-radius: 12px; cursor: pointer; transition: background .15s; }
+  button:hover { background: var(--mau-toi); } button:disabled { opacity: .6; }
+  button.phu-nut { background: var(--the-nen); color: var(--mau); border: 1px solid var(--mau); min-height: 44px; margin-top: 8px; }
+  button.phu-nut:hover { background: var(--vang-nhat); }
+  .hang-2nut { display: flex; gap: 8px; margin-top: 16px; } .hang-2nut button { margin-top: 0; }
+  .bao { margin-top: 12px; font-size: .95rem; } .bao.loi { color: var(--loi); } .bao.dat { color: var(--dat); }
+  [hidden] { display: none !important; }
+
+  /* Đầu trang app + logo */
+  .dau-app { display: flex; align-items: center; gap: 10px; }
+  .dau-app img { width: 36px; height: 36px; border-radius: 9px; }
+
+  /* Thanh menu dưới, kiểu app FaCare Life */
+  .thanh-duoi { position: fixed; left: 0; right: 0; bottom: 0; background: var(--the-nen); border-top: 1px solid var(--vien);
+    display: flex; max-width: 480px; margin: 0 auto; padding-bottom: env(safe-area-inset-bottom); }
+  .thanh-duoi button { flex: 1; width: auto; min-height: 60px; margin: 0; background: none; color: var(--phu);
+    border: 0; border-radius: 0; font-size: .72rem; font-weight: 600; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px; cursor: pointer; }
+  .thanh-duoi button .icon { font-size: 1.25rem; line-height: 1; }
+  .thanh-duoi button.dang-chon { color: var(--mau); border-top: 2px solid var(--vang); margin-top: -1px; }
+  .top { display: flex; align-items: center; justify-content: space-between; }
+  .huy-hieu { background: var(--mau); color: #fff; border-radius: 999px; padding: 2px 10px; font-size: .85rem; font-weight: 700; }
+
+  /* Quà */
+  .qua { margin-top: 16px; border: 1px solid var(--vien); border-radius: 14px; overflow: hidden; background: var(--the-nen); }
+  .qua .banner { width: 100%; aspect-ratio: 16/9; object-fit: cover; background: linear-gradient(135deg, var(--mau), var(--mau-toi) 65%, var(--vang)); }
+  .qua .banner-chu { width: 100%; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--mau), var(--mau-toi) 65%, var(--vang)); color: #fff; font-weight: 700;
+    font-size: 1.1rem; text-align: center; padding: 16px; }
+  .qua .noi-dung { padding: 14px; } .qua h3 { margin: 0 0 10px; font-size: 1.05rem; }
+  .qua .hang-nut { display: flex; gap: 8px; } .qua .hang-nut button { margin-top: 0; min-height: 46px; font-size: .92rem; }
+
+  /* Khách của tôi */
+  .dem-trang-thai { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  .dem-trang-thai .o { background: var(--the-nen); border: 1px solid var(--vien); border-radius: 10px; padding: 8px 12px; font-size: .85rem; text-align: center; min-width: 76px; }
+  .dem-trang-thai .o b { display: block; font-size: 1.2rem; color: var(--mau); }
+  .khach { background: var(--the-nen); border: 1px solid var(--vien); border-radius: 12px; padding: 12px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .khach .tt { font-size: .9rem; } .khach .tt .sdt { font-weight: 700; } .khach .tt .ngay { color: var(--phu); font-size: .8rem; }
+  .trang-thai-nhan { font-size: .72rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--vang-nhat); color: #6B5A32; }
+  .trang-thai-nhan.CONVERTED { background: var(--dat-nen); color: var(--dat); }
+  .trang-thai-nhan.WITHDRAWN, .trang-thai-nhan.DISQUALIFIED { background: var(--loi-nen); color: var(--loi); }
+  .nut-nho { width: auto; min-height: 38px; margin: 0; padding: 0 10px; font-size: .78rem; white-space: nowrap; }
+
+  /* Lộ trình */
+  .bac { background: var(--the-nen); border: 1px solid var(--vien); border-radius: 14px; padding: 16px; margin-top: 12px; position: relative; }
+  .bac.hien-tai { border-color: var(--vang); border-width: 2px; background: linear-gradient(180deg, var(--vang-nhat), var(--the-nen) 40%); }
+  .bac .so { display: inline-flex; width: 28px; height: 28px; border-radius: 999px; background: var(--nen); color: var(--phu);
+    align-items: center; justify-content: center; font-weight: 700; margin-right: 8px; }
+  .bac.hien-tai .so { background: var(--mau); color: #fff; }
+  .bac .ten { font-weight: 700; } .bac .mo-ta { color: var(--phu); font-size: .9rem; margin-top: 6px; }
+  .bac .nhan-hien-tai { float: right; font-size: .72rem; font-weight: 700; color: var(--mau); }
+
+  /* Hồ sơ */
+  .dong-tt { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--vien); font-size: .92rem; }
+  .dong-tt span:first-child { color: var(--phu); }
+</style>
+</head>
+<body>
+<main>
+  <section id="khung-dang-nhap">
+    <div class="dau-app"><img src="icon-192.png" alt="EFCLoyalty"><h1>EFCLoyalty</h1></div>
+    <p class="phu">Tài khoản EFCLoyalty dùng chung một ID với EFCommunity/FaCare Life. Đã có tài khoản thì đăng nhập thẳng; chưa có thì đăng ký mới bên dưới.</p>
+    <div class="the">
+      <div class="hang-2nut" style="margin-top:0">
+        <button type="button" id="nut-chon-dangnhap">Đăng nhập</button>
+        <button type="button" id="nut-chon-dangky" class="phu-nut">Đăng ký mới</button>
+      </div>
+
+      <form id="form-dang-nhap">
+        <label for="dinh-danh">Số điện thoại hoặc mã EFC-xxxxxx</label>
+        <input type="text" id="dinh-danh" autocomplete="username" placeholder="09xx xxx xxx hoặc EFC-000123" required>
+        <label for="pin-dn">Mã PIN (6 số)</label>
+        <input type="password" id="pin-dn" inputmode="numeric" maxlength="6" placeholder="••••••" required>
+        <button type="submit">Đăng nhập</button>
+        <p class="bao" id="bao-dang-nhap" role="status" aria-live="polite"></p>
+      </form>
+
+      <form id="form-dang-ky" hidden>
+        <label for="ten">Họ tên</label>
+        <input type="text" id="ten" autocomplete="name" required>
+        <label for="sdt">Số điện thoại</label>
+        <input type="tel" id="sdt" autocomplete="tel" inputmode="tel" placeholder="09xx xxx xxx" required>
+        <label for="nam-sinh">Năm sinh</label>
+        <input type="number" id="nam-sinh" inputmode="numeric" placeholder="vd: 1995" required>
+        <label for="pin-dk">Tự đặt mã PIN (6 số)</label>
+        <input type="password" id="pin-dk" inputmode="numeric" maxlength="6" placeholder="••••••" required>
+        <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:14px;">
+          <input type="checkbox" id="dong-y" style="width:auto; min-height:auto;" required>
+          Tôi đồng ý cho hệ thống lưu thông tin tài khoản để đăng nhập.
+        </label>
+        <button type="submit">Đăng ký</button>
+        <p class="bao" id="bao-dang-ky" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+
+  <section id="khung-app" hidden>
+    <!-- Tab: Hôm nay -->
+    <div id="tab-homnay" class="tab-noi-dung">
+      <div class="top"><h1>Quà hôm nay</h1><span class="huy-hieu" id="ma-ctv-1"></span></div>
+      <p class="phu">Mỗi lần chia sẻ, link đã gắn sẵn mã của bạn</p>
+      <div id="danh-sach-qua"></div>
+      <p class="bao" id="bao-qua" role="status"></p>
+    </div>
+
+    <!-- Tab: Khách của tôi -->
+    <div id="tab-khach" class="tab-noi-dung" hidden>
+      <h1>Khách của tôi</h1>
+      <div class="dem-trang-thai" id="dem-trang-thai"></div>
+      <div id="danh-sach-khach"></div>
+      <p class="bao" id="bao-khach" role="status"></p>
+    </div>
+
+    <!-- Tab: Lộ trình -->
+    <div id="tab-lotrinh" class="tab-noi-dung" hidden>
+      <h1>Lộ trình CTV</h1>
+      <p class="phu">4 bậc, lên bậc do admin xác nhận sau khi hoàn thành đào tạo</p>
+      <div id="danh-sach-bac"></div>
+    </div>
+
+    <!-- Tab: Kết quả (đổi tên từ "Thu nhập" 10/11/2026 — chỉ có số lượng, không phải tiền, tránh hiểu nhầm) -->
+    <div id="tab-thunhap" class="tab-noi-dung" hidden>
+      <h1>Kết quả</h1>
+      <p class="phu">Đây không phải số tiền hoa hồng — chỉ là số lượng hoạt động. Hoa hồng tính theo đơn thật, EFCare đối soát và chuyển khoản hàng tháng.</p>
+      <div class="dem-trang-thai" id="dem-thu-nhap"></div>
+      <h2 style="margin-top:20px">Hoa hồng</h2>
+      <div id="danh-sach-hoahong"></div>
+      <p class="bao" id="bao-hoahong" role="status"></p>
+    </div>
+
+    <!-- Tab: Hồ sơ -->
+    <div id="tab-hoso" class="tab-noi-dung" hidden>
+      <h1>Hồ sơ</h1>
+      <div class="the">
+        <div class="dong-tt"><span>Họ tên</span><span id="ho-so-ten"></span></div>
+        <div class="dong-tt"><span>Mã EF-ID</span><span id="ho-so-ma"></span></div>
+        <div class="dong-tt"><span>Mã giới thiệu</span><span id="ho-so-ref"></span></div>
+        <div class="dong-tt"><span>Số điện thoại</span><span id="ho-so-sdt"></span></div>
+        <div class="dong-tt"><span>Bậc hiện tại</span><span id="ho-so-bac"></span></div>
+        <div class="dong-tt"><span>Tham gia</span><span id="ho-so-ngay"></span></div>
+      </div>
+      <button type="button" id="nut-dang-xuat" class="phu-nut">Đăng xuất</button>
+    </div>
+  </section>
+</main>
+
+<nav class="thanh-duoi" id="thanh-duoi" hidden>
+  <button type="button" data-tab="homnay"><span class="icon">🎁</span>Hôm nay</button>
+  <button type="button" data-tab="khach"><span class="icon">👥</span>Khách</button>
+  <button type="button" data-tab="lotrinh"><span class="icon">🪜</span>Lộ trình</button>
+  <button type="button" data-tab="thunhap"><span class="icon">📈</span>Kết quả</button>
+  <button type="button" data-tab="hoso"><span class="icon">👤</span>Hồ sơ</button>
+</nav>
+
+<script type="module">
+const CUNG_GOC = location.hostname.endsWith('.workers.dev') || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+const API_GOC = CUNG_GOC ? '' : 'https://ctv-platform-lead-identity.efcare.workers.dev';
+const GOC_TRANG = location.origin + location.pathname.replace(/ctv\.html$/, '');
+const $ = id => document.getElementById(id);
+const KHO_PHIEN = 'ctv_session_token';
+const TEN_TRANG_THAI = { NEW: 'Mới', CONTACTABLE: 'Có thể liên hệ', QUALIFIED: 'Đủ điều kiện', NURTURING: 'Đang chăm sóc',
+  CONVERTED: 'Đã chuyển đổi', DISQUALIFIED: 'Không đạt', WITHDRAWN: 'Đã rút' };
+
+function bao(id, chu, loai = '') { const p = $(id); p.textContent = chu; p.className = 'bao ' + loai; }
+const LOI = { CHUA_CAU_HINH: 'Hệ thống đang tạm dừng.', SAI_DU_LIEU: 'Thiếu thông tin đăng nhập.',
+  THIEU_TEN: 'Vui lòng nhập họ tên.', SAI_DANH_TINH: 'Số điện thoại chưa đúng.', SAI_PIN: 'Mã PIN phải gồm đúng 6 chữ số.',
+  THIEU_NAM_SINH: 'Vui lòng nhập năm sinh.', CHUA_DONG_Y: 'Cần đồng ý để tạo tài khoản.' };
+
+// Chuyển tab Đăng nhập / Đăng ký
+$('nut-chon-dangnhap').addEventListener('click', () => { $('nut-chon-dangnhap').classList.remove('phu-nut'); $('nut-chon-dangky').classList.add('phu-nut'); $('form-dang-nhap').hidden = false; $('form-dang-ky').hidden = true; });
+$('nut-chon-dangky').addEventListener('click', () => { $('nut-chon-dangky').classList.remove('phu-nut'); $('nut-chon-dangnhap').classList.add('phu-nut'); $('form-dang-ky').hidden = false; $('form-dang-nhap').hidden = true; });
+
+async function guiAuth(duong, body, baoId) {
+  bao(baoId, 'Đang xử lý…');
+  try {
+    const r = await fetch(API_GOC + duong, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!d.ok) { bao(baoId, d.ma === 'EF_ID_TU_CHOI' ? d.chi_tiet : (LOI[d.ma] || 'Không thành công.'), 'loi'); return; }
+    localStorage.setItem(KHO_PHIEN, d.session_token);
+    await moApp();
+  } catch (_) { bao(baoId, 'Mất mạng, thử lại.', 'loi'); }
+}
+
+$('form-dang-nhap').addEventListener('submit', e => {
+  e.preventDefault();
+  const dinhDanh = $('dinh-danh').value.trim(); const pin = $('pin-dn').value.trim();
+  if (!dinhDanh || !/^\d{6}$/.test(pin)) { bao('bao-dang-nhap', !dinhDanh ? 'Nhập SĐT hoặc mã EFC-xxxxxx.' : LOI.SAI_PIN, 'loi'); return; }
+  guiAuth('/api/v1/ctv/auth/login', { dinh_danh: dinhDanh, pin }, 'bao-dang-nhap');
+});
+$('form-dang-ky').addEventListener('submit', e => {
+  e.preventDefault();
+  const ten = $('ten').value.trim(); const phone = $('sdt').value.trim();
+  const namSinh = Number($('nam-sinh').value); const pin = $('pin-dk').value.trim(); const dongY = $('dong-y').checked;
+  if (!ten) return bao('bao-dang-ky', LOI.THIEU_TEN, 'loi');
+  if (!phone) return bao('bao-dang-ky', LOI.SAI_DANH_TINH, 'loi');
+  if (!namSinh) return bao('bao-dang-ky', LOI.THIEU_NAM_SINH, 'loi');
+  if (!/^\d{6}$/.test(pin)) return bao('bao-dang-ky', LOI.SAI_PIN, 'loi');
+  if (!dongY) return bao('bao-dang-ky', LOI.CHUA_DONG_Y, 'loi');
+  guiAuth('/api/v1/ctv/auth/register', { ten, phone, nam_sinh: namSinh, pin, dong_y: dongY }, 'bao-dang-ky');
+});
+$('nut-dang-xuat').addEventListener('click', () => { localStorage.removeItem(KHO_PHIEN); location.reload(); });
+
+function goiApi(duong) {
+  const token = localStorage.getItem(KHO_PHIEN);
+  return fetch(API_GOC + duong, { headers: { Authorization: 'Bearer ' + token } }).then(r => r.ok || r.status === 401 ? r.json() : Promise.reject(r.status));
+}
+
+let meHienTai = null;
+
+async function moApp() {
+  const token = localStorage.getItem(KHO_PHIEN);
+  if (!token) return;
+  const me = await goiApi('/api/v1/ctv/me');
+  if (!me.ok) { localStorage.removeItem(KHO_PHIEN); return; }
+  meHienTai = me;
+  $('khung-dang-nhap').hidden = true; $('khung-app').hidden = false; $('thanh-duoi').hidden = false;
+  $('ma-ctv-1').textContent = me.referrer_code;
+  $('ho-so-ten').textContent = me.ten || '—';
+  $('ho-so-ma').textContent = me.efc_code || '—';
+  $('ho-so-ref').textContent = me.referrer_code;
+  $('ho-so-sdt').textContent = me.phone_masked || '—';
+  $('ho-so-bac').textContent = me.bac_ctv[me.tier].ten;
+  $('ho-so-ngay').textContent = new Date(me.created_at).toLocaleDateString('vi-VN');
+  await taiTabHomNay();
+  veLoTrinh(me);
+}
+
+// ---------- Tab Hôm nay: Quà ----------
+async function taiTabHomNay() {
+  const d = await goiApi('/api/v1/ctv/hooks');
+  if (!d.ok) return;
+  const ds = $('danh-sach-qua'); ds.textContent = '';
+  if (!d.hooks.length) { ds.innerHTML = '<p class="phu">Chưa có quà nào. Hỏi admin thêm quà mới.</p>'; return; }
+  for (const h of d.hooks) ds.appendChild(theQua(h, d.referrer_code));
+}
+function theQua(h, referrerCode) {
+  const linkChiaSe = GOC_TRANG + '?ref=' + encodeURIComponent(referrerCode) + '&hook=' + encodeURIComponent(h.id);
+  const div = document.createElement('div'); div.className = 'qua';
+  const banner = document.createElement(h.banner_image_url ? 'img' : 'div');
+  if (h.banner_image_url) { banner.className = 'banner'; banner.src = h.banner_image_url; banner.alt = h.title; banner.loading = 'lazy'; }
+  else { banner.className = 'banner-chu'; banner.textContent = h.title; }
+  div.appendChild(banner);
+  const noiDung = document.createElement('div'); noiDung.className = 'noi-dung';
+  const tieuDe = document.createElement('h3'); tieuDe.textContent = h.title; noiDung.appendChild(tieuDe);
+  const hangNut = document.createElement('div'); hangNut.className = 'hang-nut';
+  const nutChiaSe = document.createElement('button'); nutChiaSe.textContent = 'Chia sẻ';
+  nutChiaSe.onclick = () => chiaSeLink(h.title, linkChiaSe, 'bao-qua');
+  const nutSaoChep = document.createElement('button'); nutSaoChep.className = 'phu-nut'; nutSaoChep.textContent = 'Sao chép link';
+  nutSaoChep.onclick = () => navigator.clipboard.writeText(linkChiaSe).then(() => bao('bao-qua', 'Đã sao chép link.', 'dat'));
+  hangNut.append(nutChiaSe, nutSaoChep); noiDung.appendChild(hangNut); div.appendChild(noiDung);
+  return div;
+}
+async function chiaSeLink(tieuDe, link, baoId) {
+  try {
+    if (navigator.share) { await navigator.share({ title: tieuDe, url: link }); return; }
+    throw new Error('khong-co-web-share');
+  } catch (_) {
+    await navigator.clipboard.writeText(link);
+    bao(baoId, 'Đã sao chép link — dán vào Zalo/Facebook để chia sẻ.', 'dat');
+  }
+}
+
+// ---------- Tab Khách của tôi ----------
+let taiKhachRoi = false;
+async function taiTabKhach() {
+  if (taiKhachRoi) return; taiKhachRoi = true;
+  const d = await goiApi('/api/v1/ctv/my-leads');
+  if (!d.ok) return;
+  const oDem = $('dem-trang-thai'); oDem.textContent = '';
+  for (const [tt, soLuong] of Object.entries(d.dem_theo_trang_thai)) {
+    if (!soLuong) continue;
+    const o = document.createElement('div'); o.className = 'o';
+    o.innerHTML = '<b>' + soLuong + '</b>' + TEN_TRANG_THAI[tt];
+    oDem.appendChild(o);
+  }
+  const ds = $('danh-sach-khach'); ds.textContent = '';
+  if (!d.leads.length) { ds.innerHTML = '<p class="phu">Chưa có khách nào. Chia sẻ quà ở tab Hôm nay để bắt đầu.</p>'; return; }
+  for (const l of d.leads) ds.appendChild(theKhach(l));
+}
+function theKhach(l) {
+  const div = document.createElement('div'); div.className = 'khach';
+  const tt = document.createElement('div'); tt.className = 'tt';
+  tt.innerHTML = '<div class="sdt">' + l.identity_masked + '</div><div class="ngay">' + new Date(l.created_at).toLocaleDateString('vi-VN') + '</div>'
+    + (l.goi_y ? '<div class="phu" style="margin-top:4px; font-size:.82rem;">' + l.goi_y + '</div>' : '');
+  div.appendChild(tt);
+  const phai = document.createElement('div'); phai.style.textAlign = 'right';
+  const nhan = document.createElement('span'); nhan.className = 'trang-thai-nhan ' + l.status; nhan.textContent = TEN_TRANG_THAI[l.status] || l.status;
+  phai.appendChild(nhan);
+  if (!['CONVERTED', 'WITHDRAWN', 'DISQUALIFIED'].includes(l.status)) {
+    // Bấm vào KHÔNG nhắc riêng khách này — mở lại hộp chia sẻ link giới thiệu chung của bạn (đúng tên, tránh hiểu lầm).
+    const nutNhac = document.createElement('button'); nutNhac.className = 'nut-nho'; nutNhac.style.display = 'block'; nutNhac.style.marginTop = '6px';
+    nutNhac.textContent = 'Chia sẻ lại lời mời'; nutNhac.style.marginLeft = 'auto';
+    nutNhac.onclick = () => chiaSeLink('Chia sẻ lại lời mời', GOC_TRANG + '?ref=' + encodeURIComponent(meHienTai.referrer_code), 'bao-khach');
+    phai.appendChild(nutNhac);
+  }
+  div.appendChild(phai);
+  return div;
+}
+
+// ---------- Tab Lộ trình ----------
+function veLoTrinh(me) {
+  const ds = $('danh-sach-bac'); ds.textContent = '';
+  for (const b of me.bac_ctv) {
+    const div = document.createElement('div'); div.className = 'bac' + (b.bac === me.tier ? ' hien-tai' : '');
+    if (b.bac === me.tier) { const nhan = document.createElement('span'); nhan.className = 'nhan-hien-tai'; nhan.textContent = 'Bậc của bạn'; div.appendChild(nhan); }
+    div.innerHTML += '<span class="so">' + b.bac + '</span><span class="ten">' + b.ten + '</span><div class="mo-ta">' + b.mo_ta + '</div>';
+    ds.appendChild(div);
+  }
+}
+
+// ---------- Tab Kết quả (số lượng hoạt động) + Hoa hồng thật (sổ cái commission_ledger) ----------
+const TEN_LOAI_HOA_HONG = { DIRECT_REFERRAL: 'Giới thiệu trực tiếp', MANAGEMENT_BONUS: 'Thưởng quản lý' };
+const TEN_TRANG_THAI_HOA_HONG = { PENDING_VALIDATION: 'Đang chờ', APPROVED: 'Đã duyệt', PAYABLE: 'Chờ chi trả',
+  PAID: 'Đã chi trả', REJECTED: 'Từ chối', ON_HOLD: 'Tạm giữ', REVERSED: 'Đã đảo' };
+let taiThuNhapRoi = false;
+async function taiTabThuNhap() {
+  if (taiThuNhapRoi) return; taiThuNhapRoi = true;
+  const d = await goiApi('/api/v1/ctv/my-leads');
+  if (d.ok) {
+    const oDem = $('dem-thu-nhap'); oDem.textContent = '';
+    const tong = Object.values(d.dem_theo_trang_thai).reduce((a, b) => a + b, 0);
+    const oTong = document.createElement('div'); oTong.className = 'o'; oTong.innerHTML = '<b>' + tong + '</b>Tổng khách'; oDem.appendChild(oTong);
+    const oChuyenDoi = document.createElement('div'); oChuyenDoi.className = 'o';
+    oChuyenDoi.innerHTML = '<b>' + (d.dem_theo_trang_thai.CONVERTED || 0) + '</b>Đã chuyển đổi'; oDem.appendChild(oChuyenDoi);
+  }
+  const h = await goiApi('/api/v1/ctv/commissions');
+  const ds = $('danh-sach-hoahong'); ds.textContent = '';
+  if (!h.ok || !h.rows.length) { ds.innerHTML = '<p class="phu">Chưa có hoa hồng nào ghi nhận.</p>'; return; }
+  for (const r of h.rows) {
+    const div = document.createElement('div'); div.className = 'khach';
+    const soTien = (r.amount_minor || 0).toLocaleString('vi-VN') + ' ' + (r.currency || 'VND');
+    div.innerHTML = '<div class="tt"><div class="sdt">' + soTien + '</div><div class="ngay">'
+      + (TEN_LOAI_HOA_HONG[r.loai_hoa_hong] || r.loai_hoa_hong) + ' · ' + new Date(r.created_at).toLocaleDateString('vi-VN') + '</div></div>'
+      + '<span class="trang-thai-nhan ' + (r.status === 'PAID' ? 'CONVERTED' : '') + '">' + (TEN_TRANG_THAI_HOA_HONG[r.status] || r.status) + '</span>';
+    ds.appendChild(div);
+  }
+}
+
+// ---------- Chuyển tab ----------
+document.querySelectorAll('.thanh-duoi button').forEach(btn => btn.addEventListener('click', () => chuyenTab(btn.dataset.tab)));
+function chuyenTab(tab) {
+  document.querySelectorAll('.tab-noi-dung').forEach(d => d.hidden = d.id !== 'tab-' + tab);
+  document.querySelectorAll('.thanh-duoi button').forEach(b => b.classList.toggle('dang-chon', b.dataset.tab === tab));
+  if (tab === 'khach') taiTabKhach();
+  if (tab === 'thunhap') taiTabThuNhap();
+}
+chuyenTab('homnay');
+
+moApp();
+</script>
+</body>
+</html>

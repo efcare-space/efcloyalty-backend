@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Quản trị · EFCLoyalty</title>
+<link rel="icon" href="icon-192.png" type="image/png">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mau: #163963; --mau-toi: #0F2A4A; --vang: #C0A866; --vang-nhat: #F7F1CF;
+    --chu: #14243A; --phu: #5B6B80; --nen: #FBF9F3; --the-nen: #fff; --vien: #E7E0CB;
+    --loi: #A2452E; --loi-nen: #FCEDE8; --dat: #1E7B4F; --dat-nen: #E3F3EA;
+  }
+  body { margin: 0; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: var(--chu); background: var(--nen); line-height: 1.5; }
+  main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+  .dau-app { display: flex; align-items: center; gap: 10px; }
+  .dau-app img { width: 32px; height: 32px; border-radius: 8px; }
+  h1 { font-size: 1.3rem; margin: 0; }
+  h2 { color: var(--mau); border-bottom: 2px solid var(--vang-nhat); padding-bottom: 6px; margin-top: 28px; }
+  .hang { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 10px 0; }
+  input, select, button { font: inherit; min-height: 44px; padding: 6px 10px; border: 1px solid var(--vien); border-radius: 8px; }
+  button { background: var(--mau); color: #fff; border: 0; font-weight: 600; cursor: pointer; }
+  button:hover { background: var(--mau-toi); }
+  table { width: 100%; border-collapse: collapse; background: var(--the-nen); font-size: .9rem; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--vien); white-space: nowrap; }
+  th { background: var(--vang-nhat); color: var(--mau-toi); font-weight: 700; }
+  .loi { color: var(--loi); }
+  .lk { color: var(--mau); cursor: pointer; text-decoration: underline; background: none; border: 0; min-height: auto; padding: 0; font: inherit; }
+  .bang-cuon { overflow-x: auto; max-width: 100%; }   /* bảng rộng hơn màn hình 390px thì cuộn ngang, không tràn ra ngoài */
+  .thong-ke { display: flex; gap: 24px; flex-wrap: wrap; margin: 10px 0; }
+  .thong-ke table { min-width: 260px; }
+  .anh-nho { height: 36px; width: 64px; object-fit: cover; border-radius: 4px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<main>
+  <div class="dau-app"><img src="icon-192.png" alt="EFCLoyalty"><h1>Quản trị · EFCLoyalty</h1></div>
+  <div class="hang">
+    <input type="password" id="khoa" placeholder="Khoá quản trị" autocomplete="off">
+    <input type="text" id="actor" placeholder="Tên của bạn (ghi vào nhật ký)" autocomplete="off" style="min-width:200px">
+    <select id="chuong-trinh"><option value="">Mọi chương trình</option><option>EFCARE</option></select>
+    <select id="loc"><option value="">Mọi trạng thái</option><option>NEW</option><option>CONTACTABLE</option><option>QUALIFIED</option><option>NURTURING</option><option>CONVERTED</option><option>DISQUALIFIED</option><option>WITHDRAWN</option></select>
+    <button id="tai">Tải</button><button id="them" disabled>Tải thêm</button><button id="tsv" disabled>Sao chép TSV</button>
+  </div>
+  <p id="bao" role="status"></p>
+
+  <h2>Dashboard nguồn lead</h2>
+  <div class="thong-ke">
+    <div>
+      <p class="phu" style="margin:0 0 4px">Theo nguồn (attribution_source)</p>
+      <div class="bang-cuon"><table id="bang-theo-nguon"><thead><tr><th>Nguồn</th><th>Số lead</th><th>Đã chuyển đổi</th></tr></thead><tbody></tbody></table></div>
+    </div>
+    <div>
+      <p class="phu" style="margin:0 0 4px">Theo người giới thiệu (top 50)</p>
+      <div class="bang-cuon"><table id="bang-theo-gioi-thieu"><thead><tr><th>Mã CTV</th><th>Số lead</th><th>Đã chuyển đổi</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <h2>Danh sách Lead</h2>
+  <div class="bang-cuon">
+  <table><thead><tr><th>Ngày</th><th>Lead</th><th>Chương trình</th><th>Trạng thái</th><th>SĐT (che)</th><th>Nguồn</th><th>Người giới thiệu</th><th>Chiến dịch</th><th>Hook</th><th></th></tr></thead><tbody id="ds"></tbody></table>
+  </div>
+
+  <h2>Xem số điện thoại đầy đủ (bắt buộc lý do, luôn ghi lại nhật ký)</h2>
+  <div class="hang">
+    <input type="text" id="pii-lead" placeholder="Mã Lead (led_…)">
+    <input type="text" id="pii-ly-do" placeholder="Lý do xem (bắt buộc)" style="min-width:260px">
+    <button id="pii-xem">Xem</button>
+  </div>
+  <p id="pii-ket-qua"></p>
+
+  <h2>Quản lý Quà (hiện trên trang CTV)</h2>
+  <p class="phu">Dán link món quà (ảnh, video, trang bất kỳ) — hệ thống tự dò ảnh/tiêu đề làm banner cho trang CTV.</p>
+  <form class="hang" id="form-them-qua" novalidate>
+    <input type="text" id="qua-tieu-de" placeholder="Tên quà (vd: Video hạ đường huyết)" style="min-width:220px" required>
+    <input type="url" id="qua-link" placeholder="https://… link món quà" style="min-width:320px" required>
+    <button type="submit" id="qua-nut-them">Thêm quà</button>
+  </form>
+  <p id="qua-bao" role="status"></p>
+  <div class="bang-cuon">
+  <table><thead><tr><th>Banner</th><th>Tên</th><th>Link</th><th>Trạng thái</th><th>Ngày</th><th></th></tr></thead><tbody id="ds-qua"></tbody></table>
+  </div>
+
+  <h2>Quản lý CTV (lộ trình 4 bậc, định danh EF-ID)</h2>
+  <p class="phu">Nâng bậc sau khi CTV hoàn thành đào tạo ngoài nền tảng này — không tự động. "Quản lý" là người hưởng 10% thưởng quản lý nội bộ — gán tay theo hợp đồng, không suy từ người giới thiệu.</p>
+  <div class="bang-cuon">
+  <table><thead><tr><th>Tên</th><th>Mã EF-ID</th><th>Mã giới thiệu</th><th>SĐT (che)</th><th>Bậc</th><th>Số khách</th><th>Người quản lý</th><th>Tham gia</th><th>Nâng/hạ bậc</th><th>Gán quản lý</th></tr></thead><tbody id="ds-ctv"></tbody></table>
+  </div>
+
+  <h2>Quản lý Offer (giá theo từng chiến dịch)</h2>
+  <form class="hang" id="form-them-offer" novalidate>
+    <input type="text" id="offer-ma" placeholder="Mã (vd: KHOA-A)" required>
+    <input type="text" id="offer-ten" placeholder="Tên offer" style="min-width:200px" required>
+    <input type="number" id="offer-gia" placeholder="Giá (đồng, để trống = miễn phí)">
+    <button type="submit" id="offer-nut-them">Tạo offer (DRAFT)</button>
+  </form>
+  <p id="offer-bao" role="status"></p>
+  <div class="bang-cuon">
+  <table><thead><tr><th>Mã</th><th>Tên</th><th>Giá</th><th>Trạng thái</th><th></th></tr></thead><tbody id="ds-offer"></tbody></table>
+  </div>
+
+  <h2>Đơn hàng &amp; hoa hồng</h2>
+  <p class="phu">Đợt này: xác nhận thu tiền bằng tay (chờ webhook thật từ EFCare). Đánh dấu "đã thu tiền" sẽ tự tính hoa hồng 20%/10% nếu đơn gắn đúng mã Lead có người giới thiệu.</p>
+  <form class="hang" id="form-them-order" novalidate>
+    <input type="text" id="order-offer" placeholder="Mã offer (off_…)" style="min-width:200px" required>
+    <input type="text" id="order-lead" placeholder="Mã Lead (led_…, để trống nếu không có)">
+    <input type="number" id="order-tien" placeholder="Số tiền (đồng)" required>
+    <button type="submit" id="order-nut-them">Tạo đơn</button>
+  </form>
+  <p id="order-bao" role="status"></p>
+  <div class="bang-cuon">
+  <table><thead><tr><th>Mã đơn</th><th>Offer</th><th>Lead</th><th>Số tiền</th><th>Trạng thái</th><th></th></tr></thead><tbody id="ds-order"></tbody></table>
+  </div>
+
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let rows = [], next = null;
+$('khoa').value = sessionStorage.getItem('qt') || '';      // chỉ giữ trong phiên trình duyệt, đóng tab là mất
+$('actor').value = sessionStorage.getItem('qt-actor') || '';
+$('actor').addEventListener('change', () => sessionStorage.setItem('qt-actor', $('actor').value.trim()));
+function dauAdmin() {
+  return { Authorization: 'Bearer ' + $('khoa').value.trim(), 'X-Admin-Actor': $('actor').value.trim() || 'khong_ro' };
+}
+function dauAdminJson() { return { ...dauAdmin(), 'Content-Type': 'application/json' }; }
+
+async function tai(tiep) {
+  const k = $('khoa').value.trim(); if (!k) return ($('bao').textContent = 'Nhập khoá quản trị.');
+  sessionStorage.setItem('qt', k);
+  if (!tiep) { rows = []; next = null; $('ds').textContent = ''; }
+  const q = new URLSearchParams({ limit: '50' });
+  if ($('chuong-trinh').value) q.set('program_code', $('chuong-trinh').value);
+  if ($('loc').value) q.set('status', $('loc').value);
+  if (tiep && next) q.set('cursor', next);
+  const r = await fetch('/api/v1/admin/leads?' + q, { headers: dauAdmin() });
+  if (r.status === 401) { $('bao').innerHTML = '<span class="loi">Sai khoá quản trị.</span>'; return; }
+  const d = await r.json();
+  if (!d.ok) { $('bao').innerHTML = '<span class="loi">Lỗi: ' + (d.ma || r.status) + '</span>'; return; }
+  for (const x of d.rows) {
+    rows.push(x);
+    const tr = document.createElement('tr');
+    [new Date(x.created_at).toLocaleString('vi-VN'), x.id, x.program_code, x.status, x.identity_masked, x.attribution_source,
+      x.referrer_code || '', x.campaign_id || '', x.hook_id || '']
+      .forEach(v => { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); });   // textContent: chống chèn mã
+    const tdXem = document.createElement('td');
+    const btn = document.createElement('button'); btn.className = 'lk'; btn.textContent = 'xem PII →';
+    btn.onclick = () => { $('pii-lead').value = x.id; };
+    tdXem.appendChild(btn); tr.appendChild(tdXem);
+    $('ds').appendChild(tr);
+  }
+  next = d.next_cursor; $('them').disabled = !next; $('tsv').disabled = rows.length === 0;
+  $('bao').textContent = rows.length + ' lead' + (next ? ' (còn nữa)' : '');
+}
+const o = v => { let s = String(v ?? '').replace(/[\t\r\n]+/g, ' '); return /^[=+\-@]/.test(s) ? "'" + s : s; };
+$('tsv').onclick = () => navigator.clipboard.writeText(
+  ['Ngày\tLead\tChương trình\tTrạng thái\tSĐT (che)\tNguồn\tNgười giới thiệu\tChiến dịch\tHook'].concat(rows.map(x =>
+    [new Date(x.created_at).toISOString(), x.id, x.program_code, x.status, x.identity_masked, x.attribution_source, x.referrer_code || '', x.campaign_id || '', x.hook_id || ''].map(o).join('\t'))).join('\n')
+).then(() => $('bao').textContent = 'Đã sao chép ' + rows.length + ' dòng. Dán vào ô A1 của Google Sheet.');
+$('tai').onclick = () => tai(false); $('them').onclick = () => tai(true);
+
+async function taiThongKe() {
+  const k = $('khoa').value.trim(); if (!k) return;
+  const q = new URLSearchParams(); if ($('chuong-trinh').value) q.set('program_code', $('chuong-trinh').value);
+  const r = await fetch('/api/v1/admin/leads/by-source?' + q, { headers: dauAdmin() });
+  if (!r.ok) return;
+  const d = await r.json(); if (!d.ok) return;
+  const dien = (id, ds, cot) => {
+    const tb = document.querySelector('#' + id + ' tbody'); tb.textContent = '';
+    for (const x of ds) {
+      const tr = document.createElement('tr');
+      [x[cot], x.so_luong, x.da_chuyen_doi].forEach(v => { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); });
+      tb.appendChild(tr);
+    }
+  };
+  dien('bang-theo-nguon', d.theo_nguon, 'attribution_source');
+  dien('bang-theo-gioi-thieu', d.theo_nguoi_gioi_thieu, 'referrer_code');
+}
+$('tai').addEventListener('click', taiThongKe);
+
+$('pii-xem').onclick = async () => {
+  const k = $('khoa').value.trim(); const leadId = $('pii-lead').value.trim(); const lyDo = $('pii-ly-do').value.trim();
+  if (!k) return ($('pii-ket-qua').innerHTML = '<span class="loi">Nhập khoá quản trị.</span>');
+  if (!leadId || !lyDo) return ($('pii-ket-qua').innerHTML = '<span class="loi">Cần mã Lead và lý do.</span>');
+  const r = await fetch('/api/v1/admin/leads/' + encodeURIComponent(leadId) + '/pii?reason=' + encodeURIComponent(lyDo),
+    { headers: dauAdmin() });
+  const d = await r.json();
+  if (!d.ok) { $('pii-ket-qua').innerHTML = '<span class="loi">Lỗi: ' + (d.ma || r.status) + '</span>'; return; }
+  $('pii-ket-qua').textContent = d.identities.map(i => i.identity_type + ': ' + i.identity_value + ' (' + i.status + ')').join(' · ');
+};
+
+async function taiDanhSachQua() {
+  const k = $('khoa').value.trim(); if (!k) return;
+  const r = await fetch('/api/v1/admin/hooks', { headers: dauAdmin() });
+  if (!r.ok) return;
+  const d = await r.json(); if (!d.ok) return;
+  const tb = $('ds-qua'); tb.textContent = '';
+  for (const h of d.rows) {
+    const tr = document.createElement('tr');
+    const tdAnh = document.createElement('td');
+    if (h.banner_image_url) { const img = document.createElement('img'); img.className = 'anh-nho'; img.src = h.banner_image_url; img.alt = ''; tdAnh.appendChild(img); }
+    else tdAnh.textContent = '(chữ)';
+    tr.appendChild(tdAnh);
+    [h.title, h.resource_url, h.status, new Date(h.created_at).toLocaleString('vi-VN')]
+      .forEach(v => { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); });
+    const tdNut = document.createElement('td');
+    if (h.status === 'ACTIVE') {
+      const btn = document.createElement('button'); btn.className = 'lk'; btn.textContent = 'lưu kho';
+      btn.onclick = async () => {
+        await fetch('/api/v1/admin/hooks/' + encodeURIComponent(h.id) + '/archive', { method: 'POST', headers: dauAdmin() });
+        taiDanhSachQua();
+      };
+      tdNut.appendChild(btn);
+    }
+    tr.appendChild(tdNut); tb.appendChild(tr);
+  }
+}
+$('form-them-qua').addEventListener('submit', async e => {
+  e.preventDefault();
+  const k = $('khoa').value.trim(); if (!k) return ($('qua-bao').innerHTML = '<span class="loi">Nhập khoá quản trị.</span>');
+  const title = $('qua-tieu-de').value.trim(); const resource_url = $('qua-link').value.trim();
+  if (!title || !resource_url) return ($('qua-bao').innerHTML = '<span class="loi">Cần tên và link.</span>');
+  $('qua-nut-them').disabled = true; $('qua-bao').textContent = 'Đang thêm, đang dò banner…';
+  const r = await fetch('/api/v1/admin/hooks', { method: 'POST', headers: dauAdminJson(), body: JSON.stringify({ title, resource_url }) });
+  const d = await r.json();
+  $('qua-nut-them').disabled = false;
+  if (!d.ok) { $('qua-bao').innerHTML = '<span class="loi">Lỗi: ' + (d.ma || r.status) + '</span>'; return; }
+  $('qua-bao').textContent = d.banner_tu_dong ? 'Đã thêm, tự dò được banner.' : 'Đã thêm, không dò được ảnh — trang CTV sẽ tự vẽ banner chữ.';
+  $('qua-tieu-de').value = ''; $('qua-link').value = '';
+  taiDanhSachQua();
+});
+$('tai').addEventListener('click', taiDanhSachQua);
+
+const TEN_BAC = { 0: 'Bán ngay', 1: 'Xây kênh', 2: 'Tạo app/Skill', 3: 'Truyền nhân' };
+async function taiDanhSachCtv() {
+  const k = $('khoa').value.trim(); if (!k) return;
+  const r = await fetch('/api/v1/admin/ctv', { headers: dauAdmin() });
+  if (!r.ok) return;
+  const d = await r.json(); if (!d.ok) return;
+  const tb = $('ds-ctv'); tb.textContent = '';
+  for (const c of d.rows) {
+    const tr = document.createElement('tr');
+    [c.ten || '—', c.efc_code || '—', c.referrer_code, c.phone_masked || '—', TEN_BAC[c.tier] + ' (' + c.tier + ')',
+     c.so_lead, c.managed_by_efc_code || '—', new Date(c.created_at).toLocaleDateString('vi-VN')]
+      .forEach(v => { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); });
+
+    const tdBac = document.createElement('td');
+    const chon = document.createElement('select'); chon.style.minHeight = '36px';
+    for (let i = 0; i <= 3; i++) { const o = document.createElement('option'); o.value = i; o.textContent = i + ' - ' + TEN_BAC[i]; if (i === c.tier) o.selected = true; chon.appendChild(o); }
+    const btnBac = document.createElement('button'); btnBac.className = 'lk'; btnBac.textContent = 'Lưu'; btnBac.style.marginLeft = '8px';
+    btnBac.onclick = async () => {
+      await fetch('/api/v1/admin/ctv/' + encodeURIComponent(c.referrer_code) + '/tier', { method: 'POST',
+        headers: dauAdminJson(), body: JSON.stringify({ tier: Number(chon.value) }) });
+      taiDanhSachCtv();
+    };
+    tdBac.append(chon, btnBac); tr.appendChild(tdBac);
+
+    const tdQl = document.createElement('td');
+    const oQl = document.createElement('input'); oQl.placeholder = 'EFC-xxxxxx hoặc để trống'; oQl.value = c.managed_by_efc_code || '';
+    oQl.style.minWidth = '140px'; oQl.style.minHeight = '36px';
+    const btnQl = document.createElement('button'); btnQl.className = 'lk'; btnQl.textContent = 'Lưu'; btnQl.style.marginLeft = '8px';
+    btnQl.onclick = async () => {
+      await fetch('/api/v1/admin/ctv/' + encodeURIComponent(c.referrer_code) + '/manager', { method: 'POST',
+        headers: dauAdminJson(), body: JSON.stringify({ managed_by_efc_code: oQl.value.trim() || null }) });
+      taiDanhSachCtv();
+    };
+    tdQl.append(oQl, btnQl); tr.appendChild(tdQl);
+    tb.appendChild(tr);
+  }
+}
+$('tai').addEventListener('click', taiDanhSachCtv);
+
+// ---------- Offer ----------
+async function taiDanhSachOffer() {
+  const k = $('khoa').value.trim(); if (!k) return;
+  const r = await fetch('/api/v1/admin/offers', { headers: dauAdmin() });
+  if (!r.ok) return;
+  const d = await r.json(); if (!d.ok) return;
+  const tb = $('ds-offer'); tb.textContent = '';
+  for (const o of d.rows) {
+    const tr = document.createElement('tr');
+    [o.id, o.code + ' — ' + o.name, o.price_minor != null ? o.price_minor.toLocaleString('vi-VN') + ' ' + o.currency : 'Miễn phí', o.status]
+      .forEach(v => { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); });
+    const tdNut = document.createElement('td');
+    if (o.status === 'DRAFT') {
+      const btn = document.createElement('button'); btn.className = 'lk'; btn.textContent = 'Publish';
+      btn.onclick = async () => { await fetch('/api/v1/admin/offers/' + encodeURIComponent(o.id) + '/publish', { method: 'POST', headers: dauAdmin() }); taiDanhSachOffer(); };
+      tdNut.appendChild(btn);
+    }
+    tr.appendChild(tdNut); tb.appendChild(tr);
+  }
+}
+$('form-them-offer').addEventListener('submit', async e => {
+  e.preventDefault();
+  const k = $('khoa').value.trim(); if (!k) return ($('offer-bao').innerHTML = '<span class="loi">Nhập khoá quản trị.</span>');
+  const code = $('offer-ma').value.trim(); const name = $('offer-ten').value.trim();
+  const gia = $('offer-gia').value.trim();
+  $('offer-nut-them').disabled = true; $('offer-bao').textContent = 'Đang tạo…';
+  const r = await fetch('/api/v1/admin/offers', { method: 'POST', headers: dauAdminJson(),
+    body: JSON.stringify({ code, name, price_minor: gia ? Number(gia) : null }) });
+  const d = await r.json();
+  $('offer-nut-them').disabled = false;
+  if (!d.ok) { $('offer-bao').innerHTML = '<span class="loi">Lỗi: ' + (d.ma || r.status) + '</span>'; return; }
+  $('offer-bao').textContent = 'Đã tạo offer ' + d.id + ' (DRAFT) — bấm Publish để CTV/khách thấy được.';
+  $('offer-ma').value = ''; $('offer-ten').value = ''; $('offer-gia').value = '';
+  taiDanhSachOffer();
+});
+$('tai').addEventListener('click', taiDanhSachOffer);
+
+// ---------- Đơn hàng & hoa hồng ----------
+async function taiDanhSachOrder() {
+  const k = $('khoa').value.trim(); if (!k) return;
+  const r = await fetch('/api/v1/admin/orders', { headers: dauAdmin() });
+  if (!r.ok) return;
+  const d = await r.json(); if (!d.ok) return;
+  const tb = $('ds-order'); tb.textContent = '';
+  for (const o of d.rows) {
+    const tr = document.createElement('tr');
+    [o.id, o.offer_id, o.lead_id || '—', (o.amount_minor || 0).toLocaleString('vi-VN') + ' ' + o.currency, o.status]
+      .forEach(v => { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); });
+    const tdNut = document.createElement('td');
+    if (o.status === 'PENDING_PAYMENT') {
+      const btn = document.createElement('button'); btn.className = 'lk'; btn.textContent = 'Đánh dấu đã thu tiền';
+      btn.onclick = async () => {
+        const ref = prompt('Mã tham chiếu thanh toán phía EFCare (tuỳ chọn):') || null;
+        await fetch('/api/v1/admin/orders/' + encodeURIComponent(o.id) + '/mark-paid', { method: 'POST', headers: dauAdminJson(), body: JSON.stringify({ external_payment_ref: ref }) });
+        taiDanhSachOrder();
+      };
+      tdNut.appendChild(btn);
+    }
+    tr.appendChild(tdNut); tb.appendChild(tr);
+  }
+}
+$('form-them-order').addEventListener('submit', async e => {
+  e.preventDefault();
+  const k = $('khoa').value.trim(); if (!k) return ($('order-bao').innerHTML = '<span class="loi">Nhập khoá quản trị.</span>');
+  const offer_id = $('order-offer').value.trim(); const lead_id = $('order-lead').value.trim() || null;
+  const amount_minor = Number($('order-tien').value);
+  $('order-nut-them').disabled = true; $('order-bao').textContent = 'Đang tạo…';
+  const r = await fetch('/api/v1/admin/orders', { method: 'POST', headers: dauAdminJson(),
+    body: JSON.stringify({ offer_id, lead_id, amount_minor }) });
+  const d = await r.json();
+  $('order-nut-them').disabled = false;
+  if (!d.ok) { $('order-bao').innerHTML = '<span class="loi">Lỗi: ' + (d.ma || r.status) + '</span>'; return; }
+  $('order-bao').textContent = 'Đã tạo đơn ' + d.id + '.';
+  $('order-offer').value = ''; $('order-lead').value = ''; $('order-tien').value = '';
+  taiDanhSachOrder();
+});
+$('tai').addEventListener('click', taiDanhSachOrder);
+</script>
+</body>
+</html>

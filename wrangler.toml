@@ -1,0 +1,25 @@
+name = "ctv-platform-lead-identity"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+# Không còn [assets]: mặt tiền tĩnh chuyển sang GitHub Pages efcare-space/qua-tang (09/11/2026).
+# Worker này từ nay chỉ phục vụ API + D1. public/ trong thư mục này chỉ còn dùng cho dev_server.mjs
+# chạy thử cục bộ (gộp API+trang để test nhanh, không cần CORS) — KHÔNG phải bản đang public.
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ctv-platform-lead-identity-db"
+database_id = "1f63b785-5ce8-4f10-8fd3-5486e0310266"
+
+[vars]
+CONSENT_VER = "v2"
+ALLOWED_PROGRAM_CODES = "EFCARE"
+ALLOWED_ORIGIN = "https://efcare-space.github.io"
+EF_ID_SERVER_URL = "https://efc-may-chu.efcare.workers.dev"
+# CTV đăng ký/đăng nhập qua EF-ID thật (10/11/2026) — gọi thẳng máy chủ EFCommunity, không tự xác thực PIN ở
+# worker này. Đổi giá trị này nghĩa là đổi hẳn nơi CTV thật được tạo tài khoản — xem 2026-11-10_khao-sat-as-is-efcloyalty.md.
+# program_code đầu tiên là EFCARE (quyết định 09/11/2026); thêm business khác sau bằng cách nối thêm vào danh sách này.
+# Mặt tiền tĩnh (index.html, admin.html) chuyển sang GitHub Pages efcare-space/qua-tang (09/11/2026);
+# worker này chỉ còn phục vụ API + D1, nên ALLOWED_ORIGIN phải khớp đúng tên miền GitHub Pages ở trên.
+# Khoá bí mật — KHÔNG ghi vào tệp này:
+#   wrangler secret put ADMIN_TOKEN
