@@ -14,7 +14,7 @@ const EF_ID = await mayChuEfId(); // máy giả lập EF-ID thật (HTTP thật)
 after(() => EF_ID.dong()); // đóng lại sau khi hết test — không thì server còn lắng nghe, process không thoát
 const mkEnv = (extra = {}) => ({
   DB: new D1Node(join(HERE, 'schema.sql')), CONSENT_VER: 'v1', ALLOWED_PROGRAM_CODES: 'EFCARE,MULAHUB',
-  ADMIN_TOKEN: ADMIN, EF_ID_SERVER_URL: EF_ID.goc, ...extra
+  ADMIN_TOKEN: ADMIN, EF_ID: { fetch: (url, init) => fetch(EF_ID.goc, init) }, ...extra
 });
 const call = async (env, method, path, body, headers = {}) => {
   const init = { method, headers: { 'Content-Type': 'application/json', ...headers } };
@@ -636,4 +636,37 @@ test('commission_policies nạp sẵn đúng 20%/10% theo quyết định anh Li
     { code: 'DIRECT_REFERRAL', rate_percent: 20, beneficiary_rule: 'REFERRER' },
     { code: 'MANAGEMENT_BONUS', rate_percent: 10, beneficiary_rule: 'MANAGER' }
   ]);
+});
+
+// ============================================================================================
+// Admin qua EF-ID (10/11/2026) — tài khoản CTV có is_admin=1 vào được trang quản trị bằng chính
+// session EF-ID của mình, song song ADMIN_TOKEN chung (anh Hùng Marketing chưa có EF-ID riêng).
+// ============================================================================================
+
+test('CTV thường (is_admin=0 mặc định) KHÔNG vào được API quản trị dù đăng nhập EF-ID thành công', async () => {
+  const env = mkEnv();
+  const ctv = await dangKyCtv(env, '0988111222');
+  const r = await call(env, 'GET', '/api/v1/admin/ctv', undefined, { Authorization: 'Bearer ' + ctv.session_token });
+  assert.equal(r.status, 401);
+});
+
+test('CTV được gán is_admin=1: phiên EF-ID của chính họ dùng được mọi API quản trị, ADMIN_TOKEN vẫn hoạt động song song', async () => {
+  const env = mkEnv();
+  const ctv = await dangKyCtv(env, '0988111333');
+  env.DB.prepare("UPDATE ctv_profiles SET is_admin = 1 WHERE efc_code = ?").bind(ctv.efc_code).run();
+
+  const r = await call(env, 'GET', '/api/v1/admin/ctv', undefined, { Authorization: 'Bearer ' + ctv.session_token });
+  assert.equal(r.status, 200);
+
+  const vanAdminToken = await call(env, 'GET', '/api/v1/admin/ctv', undefined, { Authorization: 'Bearer ' + ADMIN });
+  assert.equal(vanAdminToken.status, 200);
+});
+
+test('Đăng nhập EF-ID trả is_admin đúng theo cờ trong ctv_profiles', async () => {
+  const env = mkEnv();
+  const dk = await dangKyCtv(env, '0988111444');
+  assert.equal(dk.is_admin, false);
+  env.DB.prepare("UPDATE ctv_profiles SET is_admin = 1 WHERE efc_code = ?").bind(dk.efc_code).run();
+  const dn = await dangNhapCtv(env, '0988111444');
+  assert.equal(dn.is_admin, true);
 });

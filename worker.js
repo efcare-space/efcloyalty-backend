@@ -274,7 +274,7 @@ async function withdrawConsent(leadId, env, cors) {
 // ---------- Quản trị: danh sách Lead (phân trang con trỏ, chỉ bản che) ----------
 async function adminLeads(request, url, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const limit = Math.min(Math.max(toInt(url.searchParams.get('limit')) || 50, 1), 100);
@@ -300,7 +300,7 @@ async function adminLeads(request, url, env, cors) {
 // ---------- Quản trị: Dashboard nguồn lead — gộp/đếm theo attribution_source và referrer_code (mục 7 Thỏa Thuận Đích) ----------
 async function adminLeadsBySource(request, url, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const programCode = url.searchParams.get('program_code');
@@ -322,7 +322,7 @@ async function adminLeadsBySource(request, url, env, cors) {
 // ---------- Quản trị: đọc PII đầy đủ của 1 Lead — bắt buộc lý do, luôn ghi audit ----------
 async function adminLeadPii(request, url, leadId, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const reason = String(url.searchParams.get('reason') || '').trim();
@@ -346,7 +346,7 @@ async function adminLeadPii(request, url, leadId, env, cors) {
 // ---------- Quản trị: xem Integration Outbox (đối soát sự kiện gửi ra ngoài) ----------
 async function adminOutbox(request, url, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const limit = Math.min(Math.max(toInt(url.searchParams.get('limit')) || 50, 1), 100);
@@ -367,8 +367,11 @@ async function adminOutbox(request, url, env, cors) {
 // ---------- EF-ID: gọi thẳng máy chủ EF-ID thật, đúng giao thức doPost { fn, args } -> { ok, data }/{ ok:false, error }.
 // Không tự xác thực PIN ở đây — EF-ID là nguồn chuẩn duy nhất (quyết định Ong Chúa 10/11/2026).
 async function efcIdCall(env, fn, args) {
-  if (!env.EF_ID_SERVER_URL) throw new Error('CHUA_CAU_HINH_EF_ID');
-  const res = await fetch(env.EF_ID_SERVER_URL, {
+  // Gọi qua Service Binding (env.EF_ID), KHÔNG qua fetch() tới URL công khai efc-may-chu.efcare.workers.dev —
+  // Cloudflare trả lỗi 1042 khi một Worker tự gọi Worker khác CÙNG tài khoản qua hostname *.workers.dev
+  // (xác nhận thật 10/11/2026 qua wrangler tail). Service Binding đi thẳng nội bộ Cloudflare, không qua mạng công khai.
+  if (!env.EF_ID) throw new Error('CHUA_CAU_HINH_EF_ID');
+  const res = await env.EF_ID.fetch('https://efc-may-chu.internal/', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fn, args })
   });
@@ -463,9 +466,9 @@ async function upsertCtvFromEfId(env, cors, efcCode, phien, hint) {
       .bind(toi.ten || null, maskedPhone, now, row.id).run();
   }
 
-  const full = await env.DB.prepare('SELECT referrer_code, tier, status FROM ctv_profiles WHERE id = ?').bind(row.id).first();
+  const full = await env.DB.prepare('SELECT referrer_code, tier, status, is_admin FROM ctv_profiles WHERE id = ?').bind(row.id).first();
   return json({ ok: true, session_token: phien, efc_code: efcCode, referrer_code: full.referrer_code,
-    tier: full.tier, status: full.status, ten: toi.ten || null, phone_masked: maskedPhone }, 200, cors);
+    tier: full.tier, status: full.status, is_admin: !!full.is_admin, ten: toi.ten || null, phone_masked: maskedPhone }, 200, cors);
 }
 
 // Xác thực phiên CTV TRỰC TIẾP qua EF-ID mỗi lần gọi (không lưu session cục bộ — tránh tạo hệ định danh song
@@ -480,7 +483,7 @@ async function authCtvSession(request, env) {
   const efcCode = toi && toi.toi && toi.toi.efc;
   if (!efcCode) return null;
   const row = await env.DB.prepare(
-    'SELECT id, efc_code, referrer_code, managed_by_efc_code, status AS ctv_status, tier, created_at AS ctv_created_at, phone_masked, ten FROM ctv_profiles WHERE efc_code = ?'
+    'SELECT id, efc_code, referrer_code, managed_by_efc_code, status AS ctv_status, tier, created_at AS ctv_created_at, phone_masked, ten, is_admin FROM ctv_profiles WHERE efc_code = ?'
   ).bind(efcCode).first();
   if (!row || row.ctv_status !== 'ACTIVE') return null;
   return row;
@@ -550,7 +553,7 @@ async function getHookPublic(id, env, cors) {
 async function adminCreateHook(request, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
   const actor = adminActor(request);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const b = await readJson(request);
@@ -594,7 +597,7 @@ async function detectBanner(resourceUrl) {
 // ---------- Quản trị: danh sách quà (gồm cả đã lưu kho) ----------
 async function adminListHooks(request, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const { results } = await env.DB.prepare(
@@ -607,7 +610,7 @@ async function adminListHooks(request, env, cors) {
 async function adminArchiveHook(request, id, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
   const actor = adminActor(request);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const r = await env.DB.prepare("UPDATE hooks SET status = 'ARCHIVED' WHERE id = ?").bind(id).run();
@@ -619,7 +622,7 @@ async function adminArchiveHook(request, id, env, cors) {
 // ---------- Quản trị: danh sách CTV (để xem bậc, nâng bậc sau khi hoàn thành đào tạo ngoài nền tảng) ----------
 async function adminListCtv(request, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const { results } = await env.DB.prepare(
@@ -634,7 +637,7 @@ async function adminListCtv(request, env, cors) {
 async function adminSetCtvTier(request, referrerCode, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
   const actor = adminActor(request);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const b = await readJson(request);
@@ -650,7 +653,7 @@ async function adminSetCtvTier(request, referrerCode, env, cors) {
 async function adminSetCtvManager(request, referrerCode, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
   const actor = adminActor(request);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const b = await readJson(request);
@@ -671,7 +674,7 @@ async function adminSetCtvManager(request, referrerCode, env, cors) {
 async function adminCreateOffer(request, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
   const actor = adminActor(request);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const b = await readJson(request);
@@ -699,7 +702,7 @@ async function adminCreateOffer(request, env, cors) {
 
 async function adminListOffers(request, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const { results } = await env.DB.prepare(
@@ -711,7 +714,7 @@ async function adminListOffers(request, env, cors) {
 async function adminPublishOffer(request, id, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
   const actor = adminActor(request);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const r = await env.DB.prepare("UPDATE offers SET status = 'PUBLISHED', updated_at = ? WHERE id = ? AND status = 'DRAFT'").bind(Date.now(), id).run();
@@ -723,7 +726,7 @@ async function adminPublishOffer(request, id, env, cors) {
 async function adminCreateOrder(request, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
   const actor = adminActor(request);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const b = await readJson(request);
@@ -745,7 +748,7 @@ async function adminCreateOrder(request, env, cors) {
 
 async function adminListOrders(request, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const { results } = await env.DB.prepare(
@@ -760,7 +763,7 @@ async function adminListOrders(request, env, cors) {
 async function adminMarkOrderPaid(request, orderId, env, cors) {
   if (!env.ADMIN_TOKEN) return json({ ok: false, ma: 'CHUA_CAU_HINH' }, 503, cors);
   const actor = adminActor(request);
-  if (!safeEqual(request.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_TOKEN)) {
+  if (!(await isAdminAuthorized(request, env))) {
     return json({ ok: false, ma: 'SAI_KHOA' }, 401, cors);
   }
   const b = await readJson(request);
@@ -836,6 +839,17 @@ async function ctvCommissions(request, env, cors) {
 }
 
 // ---------- Tiện ích ----------
+// Admin vào bằng 1 trong 2 đường: (1) ADMIN_TOKEN chung (anh Hùng Marketing, chưa có EF-ID riêng), hoặc
+// (2) phiên EF-ID của chính CTV có cờ is_admin=1 (anh Linh, EFC-000004, 10/11/2026 — gán tay qua D1, không
+// có UI tự cấp quyền admin cho người khác). adminActor() ưu tiên đọc tên thật từ phiên EF-ID nếu có.
+async function isAdminAuthorized(request, env) {
+  const auth = request.headers.get('Authorization') || '';
+  if (!auth.startsWith('Bearer ')) return false;
+  const token = auth.slice(7);
+  if (env.ADMIN_TOKEN && safeEqual(token, env.ADMIN_TOKEN)) return true;
+  const sess = await authCtvSession(request, env);
+  return !!(sess && sess.is_admin);
+}
 function adminActor(request) {
   return (request.headers.get('X-Admin-Actor') || 'khong_ro').slice(0, 60); // nhãn admin tự khai (giữ ADMIN_TOKEN chung, 10/11)
 }

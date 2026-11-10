@@ -131,6 +131,8 @@ CREATE TABLE IF NOT EXISTS ctv_profiles (
                                                   -- Lộ trình CTV 4 bậc: 0 Bán ngay · 1 Xây kênh · 2 Tạo app/Skill · 3 Truyền nhân.
                                                   -- Admin nâng bậc sau khi CTV hoàn thành đào tạo ngoài nền tảng — không tự động tính ở đây.
     status               TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'SUSPENDED')),
+    is_admin             INTEGER NOT NULL DEFAULT 0, -- 1 = phiên EF-ID của người này được vào trang quản trị,
+                                                  -- gán tay qua D1 (không có UI tự cấp — tự cấp quyền admin là việc rủi ro cao)
     created_at           INTEGER NOT NULL,
     updated_at           INTEGER NOT NULL
 );
